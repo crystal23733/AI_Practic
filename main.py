@@ -7,9 +7,25 @@ api_key = os.getenv("API_KEY")
 
 client = OpenAI(api_key=api_key)
 
-response = client.responses.create(
-  model="gpt-5",
-  input="스티븐 호킹이 누구야?"
-)
+def get_ai_response(messages):
+    response = client.responses.create(
+        model="gpt-5",
+        input=messages
+    )
+    
+    return response.output_text
 
-print(response.output_text)
+messages = [
+    {"role": "system", "content": "너는 상담사야."},
+]
+
+while True:
+    user_input = input("사용자: ")
+
+    if user_input == "exit":
+        break
+    
+    messages.append({"role" : "user", "content" : user_input})
+    ai_response = get_ai_response(messages)
+    messages.append({"role" : "assistant", "content": ai_response})
+    print("AI: " + ai_response)
