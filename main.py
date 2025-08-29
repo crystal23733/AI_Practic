@@ -1,31 +1,43 @@
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
+import torch
+from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+# from datasets import load_dataset
 
-load_dotenv()
-api_key = os.getenv("API_KEY")
+os.environ["PATH"] += os.pathsep + r"C:\ProgramData\chocolatey\lib\ffmpeg\tools\ffmpeg\bin"
 
-client = OpenAI(api_key=api_key)
 
-def get_ai_response(messages):
-    response = client.responses.create(
-        model="gpt-5",
-        input=messages
-    )
-    
-    return response.output_text
 
-messages = [
-    {"role": "system", "content": "너는 상담사야."},
-]
+device = "cuda:0" if torch.cuda.is_available() else "cpu"
+torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
-while True:
-    user_input = input("사용자: ")
+model_id = "openai/whisper-large-v3"
 
-    if user_input == "exit":
-        break
-    
-    messages.append({"role" : "user", "content" : user_input})
-    ai_response = get_ai_response(messages)
-    messages.append({"role" : "assistant", "content": ai_response})
-    print("AI: " + ai_response)
+model = AutoModelForSpeechSeq2Seq.from_pretrained(
+    model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True, use_safetensors=True
+)
+model.to(device)
+
+processor = AutoProcessor.from_pretrained(model_id)
+
+pipe = pipeline(
+    "automatic-speech-recognition",
+    model=model,
+    tokenizer=processor.tokenizer,
+    feature_extractor=processor.feature_extractor,
+    torch_dtype=torch_dtype,
+    device=device,
+    return_timestamps=True,
+    chunk_length_s=10,
+    stride_length_s=2,
+)
+
+# dataset = load_dataset("distil-whisper/librispeech_long", "clean", split="validation")
+# sample = dataset[0]["audio"]
+sample = "./audio/lsy_audio_2023_58s.mp3"
+
+result = pipe(sample)
+# print(result["text"])
+
+print(result)
