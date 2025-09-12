@@ -1,13 +1,11 @@
-from openai import OpenAI
-from dotenv import load_dotenv
+# from openai import OpenAI
+# from dotenv import load_dotenv
 import os
 import torch
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 # from datasets import load_dataset
 
 os.environ["PATH"] += os.pathsep + r"C:\ProgramData\chocolatey\lib\ffmpeg\tools\ffmpeg\bin"
-
-
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
@@ -39,5 +37,18 @@ sample = "./audio/lsy_audio_2023_58s.mp3"
 
 result = pipe(sample)
 # print(result["text"])
+
+start_end_text = []
+
+for chunk in result["chunks"]:
+    start = chunk["timestamp"][0]
+    end = chunk["timestamp"][1]
+    text = chunk["text"]
+    start_end_text.append([start, end, text])
+
+import pandas as pd
+df = pd.DataFrame(start_end_text, columns=["start", "end", "text"])
+df.to_csv("lsy_audio_2023_58.csv", index=False, sep="|")
+display(df)
 
 print(result)
